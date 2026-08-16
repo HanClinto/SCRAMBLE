@@ -20,6 +20,7 @@ const pauseButton = document.querySelector('#pause-button');
 const fullscreenButton = document.querySelector('#fullscreen-button');
 const tileSize = document.querySelector('#tile-size');
 const coverage = document.querySelector('#coverage');
+const peripheralShield = document.querySelector('#peripheral-shield');
 const refreshRate = document.querySelector('#refresh-rate');
 const glitchToggle = document.querySelector('#glitch-toggle');
 
@@ -42,6 +43,7 @@ function setStatus(message, state = '') {
 function updateControlReadouts() {
   document.querySelector('#tile-size-value').value = `${tileSize.value} × ${Number(tileSize.value) + 1}`;
   document.querySelector('#coverage-value').value = `${coverage.value}%`;
+  document.querySelector('#peripheral-shield-value').value = `${peripheralShield.value}%`;
   document.querySelector('#refresh-rate-value').value = `${refreshRate.value} ms`;
 }
 
@@ -123,6 +125,60 @@ function drawScramble(box, detectionIndex) {
   context.restore();
 }
 
+function createAperturePath(horizontalInset, verticalInset) {
+  const width = canvas.width;
+  const height = canvas.height;
+  const left = horizontalInset;
+  const right = width - horizontalInset;
+  const top = verticalInset;
+  const bottom = height - verticalInset;
+  const corner = Math.min(width, height) * .12;
+  const sideBow = width * .012;
+  const verticalBow = height * .018;
+  const path = new Path2D();
+
+  path.moveTo(left + corner, top);
+  path.bezierCurveTo(width * .36, top - verticalBow, width * .64, top - verticalBow, right - corner, top);
+  path.quadraticCurveTo(right, top, right + sideBow, top + corner);
+  path.bezierCurveTo(right + sideBow * 1.8, height * .38, right + sideBow * 1.8, height * .62, right + sideBow, bottom - corner);
+  path.quadraticCurveTo(right, bottom, right - corner, bottom);
+  path.bezierCurveTo(width * .64, bottom + verticalBow, width * .36, bottom + verticalBow, left + corner, bottom);
+  path.quadraticCurveTo(left, bottom, left - sideBow, bottom - corner);
+  path.bezierCurveTo(left - sideBow * 1.8, height * .62, left - sideBow * 1.8, height * .38, left - sideBow, top + corner);
+  path.quadraticCurveTo(left, top, left + corner, top);
+  path.closePath();
+
+  return path;
+}
+
+function drawPeripheralShield() {
+  const shieldRatio = Number(peripheralShield.value) / 100;
+  const horizontalInset = canvas.width * shieldRatio;
+  const verticalInset = canvas.height * Math.max(.055, shieldRatio * .52);
+  const aperture = createAperturePath(horizontalInset, verticalInset);
+  const mask = new Path2D();
+
+  mask.rect(0, 0, canvas.width, canvas.height);
+  mask.addPath(aperture);
+
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.fillStyle = '#080b09';
+  context.fill(mask, 'evenodd');
+
+  context.strokeStyle = 'rgba(199, 255, 69, .16)';
+  context.lineWidth = Math.max(2, canvas.width * .004);
+  context.shadowColor = 'rgba(199, 255, 69, .34)';
+  context.shadowBlur = Math.max(8, canvas.width * .014);
+  context.stroke(aperture);
+
+  context.shadowBlur = 0;
+  context.strokeStyle = 'rgba(237, 241, 235, .25)';
+  context.lineWidth = Math.max(1, canvas.width * .0012);
+  context.stroke(aperture);
+  context.restore();
+}
+
 function renderFrame(now) {
   if (!stream || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
 
@@ -147,6 +203,7 @@ function renderFrame(now) {
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
   detections.forEach((detection, index) => drawScramble(detection.boundingBox, index));
   context.restore();
+  drawPeripheralShield();
 
   faceCount.textContent = String(detections.length).padStart(2, '0');
   setStatus(paused ? 'FEED PAUSED' : detections.length ? 'FILTER ACTIVE' : 'SCANNING', 'active');
@@ -227,7 +284,7 @@ document.addEventListener('fullscreenchange', () => {
   fullscreenButton.title = active ? 'Exit fullscreen' : 'Enter fullscreen';
   fullscreenButton.setAttribute('aria-label', fullscreenButton.title);
 });
-[tileSize, coverage, refreshRate].forEach((control) => control.addEventListener('input', updateControlReadouts));
+[tileSize, coverage, peripheralShield, refreshRate].forEach((control) => control.addEventListener('input', updateControlReadouts));
 window.addEventListener('pagehide', () => stream?.getTracks().forEach((track) => track.stop()));
 
 updateControlReadouts();
