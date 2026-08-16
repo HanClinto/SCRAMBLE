@@ -39,39 +39,47 @@
             <span id="face-count" class="face-count">00</span>
           </div>
 
-          <label class="control-group" for="tile-size">
-            <span class="control-label"><span>Fragment size</span><output id="tile-size-value">5 × 6</output></span>
-            <input id="tile-size" type="range" min="3" max="9" value="5" />
-          </label>
+          <details class="filter-controls">
+            <summary>
+              <span>Filter settings</span>
+              <span class="disclosure-state" aria-hidden="true"></span>
+            </summary>
+            <div class="filter-controls-body">
+              <label class="control-group" for="tile-size">
+                <span class="control-label"><span>Fragment size</span><output id="tile-size-value">5 × 6</output></span>
+                <input id="tile-size" type="range" min="3" max="9" value="5" />
+              </label>
 
-          <label class="control-group" for="coverage">
-            <span class="control-label"><span>Coverage</span><output id="coverage-value">28%</output></span>
-            <input id="coverage" type="range" min="8" max="55" value="28" />
-          </label>
+              <label class="control-group" for="coverage">
+                <span class="control-label"><span>Coverage</span><output id="coverage-value">28%</output></span>
+                <input id="coverage" type="range" min="8" max="55" value="28" />
+              </label>
 
-          <label class="control-group" for="persistence">
-            <span class="control-label"><span>Detection persistence</span><output id="persistence-value">800 ms</output></span>
-            <input id="persistence" type="range" min="200" max="1600" step="100" value="800" />
-          </label>
+              <label class="control-group" for="persistence">
+                <span class="control-label"><span>Detection persistence</span><output id="persistence-value">800 ms</output></span>
+                <input id="persistence" type="range" min="200" max="1600" step="100" value="800" />
+              </label>
 
-          <label class="control-group" for="peripheral-shield">
-            <span class="control-label"><span>Peripheral shield</span><output id="peripheral-shield-value">12%</output></span>
-            <input id="peripheral-shield" type="range" min="5" max="24" value="12" />
-          </label>
+              <label class="control-group" for="peripheral-shield">
+                <span class="control-label"><span>Peripheral shield</span><output id="peripheral-shield-value">12%</output></span>
+                <input id="peripheral-shield" type="range" min="5" max="24" value="12" />
+              </label>
 
-          <label class="control-group" for="refresh-rate">
-            <span class="control-label"><span>Reshuffle</span><output id="refresh-rate-value">650 ms</output></span>
-            <input id="refresh-rate" type="range" min="150" max="1600" step="50" value="650" />
-          </label>
+              <label class="control-group" for="refresh-rate">
+                <span class="control-label"><span>Reshuffle</span><output id="refresh-rate-value">650 ms</output></span>
+                <input id="refresh-rate" type="range" min="150" max="1600" step="50" value="650" />
+              </label>
 
-          <label class="toggle-row" for="glitch-toggle">
-            <span>
-              <strong>Signal fracture</strong>
-              <small>Offset color channels</small>
-            </span>
-            <input id="glitch-toggle" type="checkbox" checked />
-            <span class="toggle" aria-hidden="true"></span>
-          </label>
+              <label class="toggle-row" for="glitch-toggle">
+                <span>
+                  <strong>Signal fracture</strong>
+                  <small>Offset color channels</small>
+                </span>
+                <input id="glitch-toggle" type="checkbox" checked />
+                <span class="toggle" aria-hidden="true"></span>
+              </label>
+            </div>
+          </details>
 
           <div class="rail-actions">
             <button id="immersive-button" class="text-button immersive-button" type="button" disabled>
