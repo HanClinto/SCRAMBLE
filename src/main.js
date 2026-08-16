@@ -20,6 +20,7 @@ const pauseButton = document.querySelector('#pause-button');
 const fullscreenButton = document.querySelector('#fullscreen-button');
 const tileSize = document.querySelector('#tile-size');
 const coverage = document.querySelector('#coverage');
+const persistence = document.querySelector('#persistence');
 const peripheralShield = document.querySelector('#peripheral-shield');
 const refreshRate = document.querySelector('#refresh-rate');
 const glitchToggle = document.querySelector('#glitch-toggle');
@@ -27,7 +28,7 @@ const glitchToggle = document.querySelector('#glitch-toggle');
 let detector;
 let stream;
 let animationFrame;
-let detections = [];
+let trackedFaces = [];
 let lastDetectionAt = 0;
 let lastVideoTime = -1;
 let facingMode = 'user';
@@ -43,6 +44,7 @@ function setStatus(message, state = '') {
 function updateControlReadouts() {
   document.querySelector('#tile-size-value').value = `${tileSize.value} × ${Number(tileSize.value) + 1}`;
   document.querySelector('#coverage-value').value = `${coverage.value}%`;
+  document.querySelector('#persistence-value').value = `${persistence.value} ms`;
   document.querySelector('#peripheral-shield-value').value = `${peripheralShield.value}%`;
   document.querySelector('#refresh-rate-value').value = `${refreshRate.value} ms`;
 }
@@ -73,6 +75,55 @@ function expandedBox(box) {
     width: Math.min(width, video.videoWidth),
     height: Math.min(height, video.videoHeight),
   };
+}
+
+function boxIntersectionOverUnion(first, second) {
+  const left = Math.max(first.originX, second.originX);
+  const top = Math.max(first.originY, second.originY);
+  const right = Math.min(first.originX + first.width, second.originX + second.width);
+  const bottom = Math.min(first.originY + first.height, second.originY + second.height);
+  const intersection = Math.max(0, right - left) * Math.max(0, bottom - top);
+  const union = first.width * first.height + second.width * second.height - intersection;
+  return union ? intersection / union : 0;
+}
+
+function smoothBox(previous, next) {
+  const nextWeight = .42;
+  const previousWeight = 1 - nextWeight;
+  return {
+    originX: previous.originX * previousWeight + next.originX * nextWeight,
+    originY: previous.originY * previousWeight + next.originY * nextWeight,
+    width: previous.width * previousWeight + next.width * nextWeight,
+    height: previous.height * previousWeight + next.height * nextWeight,
+  };
+}
+
+function updateTrackedFaces(detections, now) {
+  const unmatchedTracks = new Set(trackedFaces.map((_, index) => index));
+
+  detections.forEach((detection) => {
+    let bestTrackIndex = -1;
+    let bestOverlap = .12;
+
+    unmatchedTracks.forEach((trackIndex) => {
+      const overlap = boxIntersectionOverUnion(trackedFaces[trackIndex].box, detection.boundingBox);
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        bestTrackIndex = trackIndex;
+      }
+    });
+
+    if (bestTrackIndex >= 0) {
+      const track = trackedFaces[bestTrackIndex];
+      track.box = smoothBox(track.box, detection.boundingBox);
+      track.lastSeen = now;
+      unmatchedTracks.delete(bestTrackIndex);
+    } else {
+      trackedFaces.push({ box: detection.boundingBox, lastSeen: now });
+    }
+  });
+
+  trackedFaces = trackedFaces.filter((track) => now - track.lastSeen <= Number(persistence.value));
 }
 
 function drawScramble(box, detectionIndex) {
@@ -184,7 +235,7 @@ function renderFrame(now) {
 
   if (!paused && video.currentTime !== lastVideoTime && now - lastDetectionAt >= DETECTION_INTERVAL) {
     try {
-      detections = detector.detectForVideo(video, now).detections;
+      updateTrackedFaces(detector.detectForVideo(video, now).detections, now);
       lastVideoTime = video.currentTime;
       lastDetectionAt = now;
     } catch (error) {
@@ -201,12 +252,12 @@ function renderFrame(now) {
   context.translate(canvas.width, 0);
   context.scale(-1, 1);
   context.drawImage(video, 0, 0, canvas.width, canvas.height);
-  detections.forEach((detection, index) => drawScramble(detection.boundingBox, index));
+  trackedFaces.forEach((track, index) => drawScramble(track.box, index));
   context.restore();
   drawPeripheralShield();
 
-  faceCount.textContent = String(detections.length).padStart(2, '0');
-  setStatus(paused ? 'FEED PAUSED' : detections.length ? 'FILTER ACTIVE' : 'SCANNING', 'active');
+  faceCount.textContent = String(trackedFaces.length).padStart(2, '0');
+  setStatus(paused ? 'FEED PAUSED' : trackedFaces.length ? 'FILTER ACTIVE' : 'SCANNING', 'active');
   animationFrame = requestAnimationFrame(renderFrame);
 }
 
@@ -217,7 +268,7 @@ async function loadDetector() {
   detector = await FaceDetector.createFromOptions(vision, {
     baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
     runningMode: 'VIDEO',
-    minDetectionConfidence: 0.55,
+    minDetectionConfidence: 0.35,
     minSuppressionThreshold: 0.3,
   });
 }
@@ -245,7 +296,7 @@ async function startCamera() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     resolutionReadout.textContent = `${video.videoWidth} × ${video.videoHeight}`;
-    detections = [];
+    trackedFaces = [];
     startPanel.classList.add('hidden');
     scanOverlay.classList.add('active');
     cameraButton.disabled = false;
@@ -284,7 +335,7 @@ document.addEventListener('fullscreenchange', () => {
   fullscreenButton.title = active ? 'Exit fullscreen' : 'Enter fullscreen';
   fullscreenButton.setAttribute('aria-label', fullscreenButton.title);
 });
-[tileSize, coverage, peripheralShield, refreshRate].forEach((control) => control.addEventListener('input', updateControlReadouts));
+[tileSize, coverage, persistence, peripheralShield, refreshRate].forEach((control) => control.addEventListener('input', updateControlReadouts));
 window.addEventListener('pagehide', () => stream?.getTracks().forEach((track) => track.stop()));
 
 updateControlReadouts();

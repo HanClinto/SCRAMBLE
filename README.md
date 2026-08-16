@@ -26,6 +26,7 @@ Use a current Chromium, Firefox, or Safari release with WebAssembly, WebGL, canv
 
 - Multiple face detection with MediaPipe BlazeFace
 - Shuffled grid redaction with adjustable fragmentation and coverage
+- Conservative low-confidence detection with adjustable temporal persistence
 - Opaque curved peripheral shielding to conceal partially visible edge faces
 - Optional color-channel fracture effect
 - Front/rear camera switching where the device exposes both cameras
