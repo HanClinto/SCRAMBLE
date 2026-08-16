@@ -1,6 +1,6 @@
 # SCRAMBLE
 
-A browser-based experiment in real-time face detection and optical redaction. SCRAMBLE uses MediaPipe's BlazeFace detector to locate faces in a webcam feed, then rearranges each face into a shifting grid directly on a canvas.
+A browser-based experiment in real-time face detection and optical redaction. SCRAMBLE uses MediaPipe's full-range BlazeFace detector to locate nearby and distant faces in a webcam feed, then rearranges each face into a shifting grid directly on a canvas.
 
 Camera frames are processed locally in the browser. They are not recorded or uploaded.
 
@@ -24,7 +24,7 @@ Use a current Chromium, Firefox, or Safari release with WebAssembly, WebGL, canv
 
 ## Current scope
 
-- Multiple face detection with MediaPipe BlazeFace
+- Multiple near- and far-face detection with MediaPipe BlazeFace full-range
 - Shuffled grid redaction with adjustable fragmentation and coverage
 - Conservative low-confidence detection with adjustable temporal persistence
 - Opaque curved peripheral shielding to conceal partially visible edge faces

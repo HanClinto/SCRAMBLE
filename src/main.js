@@ -1,7 +1,8 @@
 const cacheToken = new URL(import.meta.url).searchParams.get('v');
 const versionedUrl = (url) => cacheToken ? `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(cacheToken)}` : url;
 const MEDIAPIPE_URL = versionedUrl('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/+esm');
-const MODEL_URL = versionedUrl('https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite');
+const MODEL_NAME = 'BlazeFace full-range';
+const MODEL_URL = versionedUrl('https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite');
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm';
 const THREE_URL = versionedUrl('https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.min.js');
 const DETECTION_INTERVAL = 80;
@@ -86,6 +87,7 @@ function diagnosticEntries() {
   return [
     ['Page', location.href],
     ['Cache token', cacheToken || 'none'],
+    ['Face detector', MODEL_NAME],
     ['Secure context', String(window.isSecureContext), window.isSecureContext],
     ['WebXR API', navigator.xr ? 'available' : 'unavailable', Boolean(navigator.xr)],
     ['immersive-vr check', immersiveSupportState === 'complete' ? String(immersiveSupported) : immersiveSupportState, immersiveSupported],
