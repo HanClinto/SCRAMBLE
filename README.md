@@ -30,7 +30,10 @@ Use a current Chromium, Firefox, or Safari release with WebAssembly, WebGL, canv
 - Opaque curved peripheral shielding to conceal partially visible edge faces
 - Optional color-channel fracture effect
 - Front/rear camera switching where the device exposes both cameras
+- Experimental head-locked immersive WebXR presentation on compatible headsets
 - Responsive desktop and mobile controls
+
+The immersive mode presents the processed camera feed on a visor-sized plane attached to the WebXR viewer camera. It follows head movement, but remains a monoscopic view of the camera stream rather than true stereo passthrough. Browser support for keeping a webcam stream active during an immersive session is device-dependent.
 
 This prototype performs face **detection**, not identification or recognition.
 

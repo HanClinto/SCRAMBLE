@@ -2,6 +2,7 @@ import { FaceDetector, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@med
 
 const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm';
+const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.min.js';
 const DETECTION_INTERVAL = 80;
 
 const video = document.querySelector('#camera-feed');
@@ -17,6 +18,7 @@ const resolutionReadout = document.querySelector('#resolution-readout');
 const scanOverlay = document.querySelector('#scan-overlay');
 const cameraButton = document.querySelector('#camera-button');
 const pauseButton = document.querySelector('#pause-button');
+const immersiveButton = document.querySelector('#immersive-button');
 const fullscreenButton = document.querySelector('#fullscreen-button');
 const tileSize = document.querySelector('#tile-size');
 const coverage = document.querySelector('#coverage');
@@ -35,6 +37,9 @@ let facingMode = 'user';
 let paused = false;
 let shuffleSeed = 1;
 let nextShuffleAt = 0;
+let immersiveSupported = false;
+let immersiveSession;
+let immersiveRenderer;
 
 function setStatus(message, state = '') {
   statusText.textContent = message;
@@ -230,7 +235,7 @@ function drawPeripheralShield() {
   context.restore();
 }
 
-function renderFrame(now) {
+function drawProcessedFrame(now) {
   if (!stream || video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
 
   if (!paused && video.currentTime !== lastVideoTime && now - lastDetectionAt >= DETECTION_INTERVAL) {
@@ -258,7 +263,91 @@ function renderFrame(now) {
 
   faceCount.textContent = String(trackedFaces.length).padStart(2, '0');
   setStatus(paused ? 'FEED PAUSED' : trackedFaces.length ? 'FILTER ACTIVE' : 'SCANNING', 'active');
+}
+
+function renderFrame(now) {
+  drawProcessedFrame(now);
   animationFrame = requestAnimationFrame(renderFrame);
+}
+
+async function enterImmersive() {
+  if (!immersiveSupported || !stream) return;
+  if (immersiveSession) {
+    await immersiveSession.end();
+    return;
+  }
+
+  immersiveButton.disabled = true;
+  setStatus('ENTERING IMMERSIVE');
+  const session = await navigator.xr.requestSession('immersive-vr', {
+    optionalFeatures: ['local-floor'],
+  });
+
+  try {
+    const THREE = await import(THREE_URL);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x080b09);
+
+    const camera = new THREE.PerspectiveCamera(70, 16 / 9, .01, 10);
+    scene.add(camera);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    renderer.xr.enabled = true;
+    renderer.xr.setReferenceSpaceType('local');
+    renderer.xr.setFramebufferScaleFactor(.9);
+    renderer.domElement.className = 'xr-render-surface';
+    document.body.appendChild(renderer.domElement);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+
+    const visor = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.65, 2.65 * 9 / 16),
+      new THREE.MeshBasicMaterial({ map: texture, toneMapped: false }),
+    );
+    visor.position.set(0, 0, -1.05);
+    camera.add(visor);
+
+    immersiveSession = session;
+    immersiveRenderer = renderer;
+    cancelAnimationFrame(animationFrame);
+
+    session.addEventListener('end', () => {
+      renderer.setAnimationLoop(null);
+      renderer.dispose();
+      renderer.domElement.remove();
+      immersiveSession = undefined;
+      immersiveRenderer = undefined;
+      immersiveButton.disabled = false;
+      immersiveButton.lastChild.textContent = ' Enter immersive';
+      animationFrame = requestAnimationFrame(renderFrame);
+    }, { once: true });
+
+    await renderer.xr.setSession(session);
+    immersiveButton.disabled = false;
+    immersiveButton.lastChild.textContent = ' Exit immersive';
+    renderer.setAnimationLoop((time) => {
+      drawProcessedFrame(time);
+      texture.needsUpdate = true;
+      renderer.render(scene, camera);
+    });
+  } catch (error) {
+    await session.end();
+    throw error;
+  }
+}
+
+async function detectImmersiveSupport() {
+  if (!navigator.xr) return;
+  try {
+    immersiveSupported = await navigator.xr.isSessionSupported('immersive-vr');
+    immersiveButton.disabled = !immersiveSupported || !stream;
+    immersiveButton.title = immersiveSupported ? 'Enter head-tracked immersive view' : 'Immersive WebXR is unavailable';
+  } catch (error) {
+    console.warn('Unable to determine immersive WebXR support:', error);
+  }
 }
 
 async function loadDetector() {
@@ -301,6 +390,7 @@ async function startCamera() {
     scanOverlay.classList.add('active');
     cameraButton.disabled = false;
     pauseButton.disabled = false;
+    immersiveButton.disabled = !immersiveSupported;
     paused = false;
     cancelAnimationFrame(animationFrame);
     animationFrame = requestAnimationFrame(renderFrame);
@@ -326,6 +416,15 @@ pauseButton.addEventListener('click', () => {
   paused ? video.pause() : video.play();
   pauseButton.lastChild.textContent = paused ? ' Resume feed' : ' Pause feed';
 });
+immersiveButton.addEventListener('click', async () => {
+  try {
+    await enterImmersive();
+  } catch (error) {
+    console.error('Unable to enter immersive mode:', error);
+    immersiveButton.disabled = false;
+    setStatus('IMMERSIVE FAILED', 'error');
+  }
+});
 fullscreenButton.addEventListener('click', async () => {
   if (document.fullscreenElement) await document.exitFullscreen();
   else await document.documentElement.requestFullscreen();
@@ -339,3 +438,4 @@ document.addEventListener('fullscreenchange', () => {
 window.addEventListener('pagehide', () => stream?.getTracks().forEach((track) => track.stop()));
 
 updateControlReadouts();
+detectImmersiveSupport();

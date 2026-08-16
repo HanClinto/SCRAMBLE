@@ -60,6 +60,7 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 16px; border: 0; bor
 .toggle-row input:checked + .toggle { border-color: var(--signal); }
 .toggle-row input:checked + .toggle::after { background: var(--signal); transform: translateX(16px); }
 .rail-actions { display: grid; gap: 1px; margin-top: auto; padding-top: 20px; }
+.immersive-button { color: var(--signal); }
 .text-button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line); background: #1b201c; font-size: 11px; cursor: pointer; }
 .text-button:hover:not(:disabled) { border-color: var(--signal); color: var(--signal); }
 .text-button:disabled { color: #59605b; cursor: not-allowed; }
@@ -106,6 +107,7 @@ h1 { max-width: 720px; margin: 0; font-size: clamp(36px, 6vw, 76px); font-weight
   .viewport { grid-row: 1; min-height: 520px; }
   .control-rail { grid-row: 2; border-top: 1px solid var(--line); border-right: 0; overflow: visible; }
   .rail-actions { margin-top: 8px; grid-template-columns: 1fr 1fr; }
+  .immersive-button { grid-column: 1 / -1; }
   .start-panel { padding: 24px 18px; }
   .aperture { width: 58px; height: 58px; margin-bottom: 22px; }
   h1 { font-size: clamp(34px, 11vw, 54px); }
