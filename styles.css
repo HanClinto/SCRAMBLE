@@ -61,6 +61,9 @@ input[type='range']::-moz-range-thumb { width: 9px; height: 16px; border: 0; bor
 .toggle-row input:checked + .toggle::after { background: var(--signal); transform: translateX(16px); }
 .rail-actions { display: grid; gap: 1px; margin-top: auto; padding-top: 20px; }
 .immersive-button { color: var(--signal); }
+.immersive-reason { margin: 6px 2px 9px; color: var(--muted); font: 400 9px/1.45 'Chivo Mono', monospace; }
+.immersive-reason.ready { color: var(--signal); }
+.immersive-reason.blocked { color: var(--alert); }
 .text-button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line); background: #1b201c; font-size: 11px; cursor: pointer; }
 .text-button:hover:not(:disabled) { border-color: var(--signal); color: var(--signal); }
 .text-button:disabled { color: #59605b; cursor: not-allowed; }
@@ -96,6 +99,25 @@ h1 { max-width: 720px; margin: 0; font-size: clamp(36px, 6vw, 76px); font-weight
 .error-message { min-height: 18px; max-width: 480px; margin: 14px 0 0; color: var(--alert); font: 500 10px/1.5 'Chivo Mono', monospace; }
 .viewport-meta { position: absolute; z-index: 2; right: 37px; bottom: 34px; left: 37px; display: flex; justify-content: space-between; color: rgba(237,241,235,.6); font: 500 9px 'Chivo Mono', monospace; pointer-events: none; }
 
+.debug-dialog { width: min(620px, calc(100vw - 28px)); max-height: calc(100dvh - 28px); padding: 0; border: 1px solid var(--line); border-radius: 0; background: #171b18; color: var(--ink); overflow: auto; }
+.debug-dialog::backdrop { background: rgba(5, 7, 6, .82); }
+.debug-heading { display: flex; justify-content: space-between; align-items: stretch; padding-left: 20px; border-bottom: 1px solid var(--line); }
+.debug-heading > div { padding: 18px 0 16px; }
+.debug-heading .eyebrow { margin-bottom: 5px; }
+.debug-heading h2 { margin: 0; font-size: 20px; font-weight: 500; }
+.debug-heading .icon-button { height: auto; min-height: 68px; }
+.debug-summary { margin: 0; padding: 16px 20px; border-bottom: 1px solid var(--line); color: var(--signal); font: 500 11px/1.5 'Chivo Mono', monospace; }
+.debug-summary.blocked { color: var(--alert); }
+.debug-values { display: grid; grid-template-columns: minmax(130px, .75fr) minmax(0, 1.7fr); margin: 0; font: 400 10px/1.45 'Chivo Mono', monospace; }
+.debug-values dt, .debug-values dd { min-width: 0; margin: 0; padding: 9px 20px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.debug-values dt { color: var(--muted); }
+.debug-values dd { border-left: 1px solid var(--line); color: var(--ink); }
+.debug-values dd.good { color: var(--signal); }
+.debug-values dd.bad { color: var(--alert); }
+.debug-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 18px 20px 8px; }
+.debug-actions .primary-button { justify-content: center; }
+.debug-note { margin: 0; padding: 8px 20px 20px; color: var(--muted); font: 400 9px/1.5 'Chivo Mono', monospace; }
+
 @media (max-width: 720px) {
   body { overflow-x: hidden; overflow-y: auto; }
   .app-shell { grid-template-rows: 52px auto; }
@@ -108,11 +130,18 @@ h1 { max-width: 720px; margin: 0; font-size: clamp(36px, 6vw, 76px); font-weight
   .control-rail { grid-row: 2; border-top: 1px solid var(--line); border-right: 0; overflow: visible; }
   .rail-actions { margin-top: 8px; grid-template-columns: 1fr 1fr; }
   .immersive-button { grid-column: 1 / -1; }
+  .immersive-reason { grid-column: 1 / -1; }
   .start-panel { padding: 24px 18px; }
   .aperture { width: 58px; height: 58px; margin-bottom: 22px; }
   h1 { font-size: clamp(34px, 11vw, 54px); }
   .viewport-meta { right: 16px; bottom: 15px; left: 16px; }
   .scan-overlay { inset: 14px; }
+}
+
+@media (max-width: 480px) {
+  .debug-values { grid-template-columns: 112px minmax(0, 1fr); }
+  .debug-values dt, .debug-values dd { padding: 8px 11px; }
+  .debug-actions { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 400px) {

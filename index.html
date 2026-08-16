@@ -8,7 +8,13 @@
     <title>SCRAMBLE // Optical Redaction</title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="preconnect" href="https://storage.googleapis.com" crossorigin />
-    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      const cacheToken = new URLSearchParams(location.search).get('fresh');
+      const stylesheet = document.createElement('link');
+      stylesheet.rel = 'stylesheet';
+      stylesheet.href = `./styles.css${cacheToken ? `?v=${encodeURIComponent(cacheToken)}` : ''}`;
+      document.head.appendChild(stylesheet);
+    </script>
   </head>
   <body>
     <main class="app-shell">
@@ -72,6 +78,7 @@
               <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v5a2 2 0 0 1-2 2h-3.5l-2-3h-5l-2 3H4a2 2 0 0 1-2-2v-5Z"/><path d="M7 12h2M15 12h2"/></svg>
               Enter immersive
             </button>
+            <p id="immersive-reason" class="immersive-reason" aria-live="polite">Checking WebXR support…</p>
             <button id="camera-button" class="text-button" type="button" disabled>
               <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m14.5 4-1-2h-3l-1 2H5a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-4.5Z"/><circle cx="12" cy="12" r="4"/></svg>
               Switch camera
@@ -79,6 +86,10 @@
             <button id="pause-button" class="text-button" type="button" disabled>
               <svg aria-hidden="true" viewBox="0 0 24 24"><rect width="4" height="16" x="6" y="4"/><rect width="4" height="16" x="14" y="4"/></svg>
               Pause feed
+            </button>
+            <button id="debug-button" class="text-button" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+              Diagnostics
             </button>
           </div>
 
@@ -116,6 +127,31 @@
         </section>
       </section>
     </main>
-    <script type="module" src="./src/main.js"></script>
+
+    <dialog id="debug-dialog" class="debug-dialog" aria-labelledby="debug-title">
+      <div class="debug-heading">
+        <div>
+          <p class="eyebrow">RUNTIME PROBE</p>
+          <h2 id="debug-title">Diagnostics</h2>
+        </div>
+        <button id="debug-close-button" class="icon-button" type="button" title="Close diagnostics" aria-label="Close diagnostics">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></svg>
+        </button>
+      </div>
+      <p id="debug-summary" class="debug-summary"></p>
+      <dl id="debug-values" class="debug-values"></dl>
+      <div class="debug-actions">
+        <button id="debug-copy-button" class="text-button" type="button">Copy report</button>
+        <button id="hard-refresh-button" class="primary-button" type="button">Fresh reload</button>
+      </div>
+      <p class="debug-note">Fresh reload versions this page, its stylesheet and module, MediaPipe JavaScript and model, and Three.js. The pinned MediaPipe WASM runtime may still use the browser’s HTTP cache.</p>
+    </dialog>
+
+    <script type="module">
+      const cacheToken = new URLSearchParams(location.search).get('fresh');
+      const moduleUrl = new URL('./src/main.js', location.href);
+      if (cacheToken) moduleUrl.searchParams.set('v', cacheToken);
+      import(moduleUrl.href);
+    </script>
   </body>
 </html>

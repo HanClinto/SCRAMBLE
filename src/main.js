@@ -1,8 +1,9 @@
-import { FaceDetector, FilesetResolver } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/+esm';
-
-const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
+const cacheToken = new URL(import.meta.url).searchParams.get('v');
+const versionedUrl = (url) => cacheToken ? `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(cacheToken)}` : url;
+const MEDIAPIPE_URL = versionedUrl('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/+esm');
+const MODEL_URL = versionedUrl('https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite');
 const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm';
-const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.min.js';
+const THREE_URL = versionedUrl('https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.min.js');
 const DETECTION_INTERVAL = 80;
 
 const video = document.querySelector('#camera-feed');
@@ -19,7 +20,15 @@ const scanOverlay = document.querySelector('#scan-overlay');
 const cameraButton = document.querySelector('#camera-button');
 const pauseButton = document.querySelector('#pause-button');
 const immersiveButton = document.querySelector('#immersive-button');
+const immersiveReason = document.querySelector('#immersive-reason');
 const fullscreenButton = document.querySelector('#fullscreen-button');
+const debugButton = document.querySelector('#debug-button');
+const debugDialog = document.querySelector('#debug-dialog');
+const debugCloseButton = document.querySelector('#debug-close-button');
+const debugCopyButton = document.querySelector('#debug-copy-button');
+const debugSummary = document.querySelector('#debug-summary');
+const debugValues = document.querySelector('#debug-values');
+const hardRefreshButton = document.querySelector('#hard-refresh-button');
 const tileSize = document.querySelector('#tile-size');
 const coverage = document.querySelector('#coverage');
 const persistence = document.querySelector('#persistence');
@@ -28,6 +37,7 @@ const refreshRate = document.querySelector('#refresh-rate');
 const glitchToggle = document.querySelector('#glitch-toggle');
 
 let detector;
+let visionModulePromise;
 let stream;
 let animationFrame;
 let trackedFaces = [];
@@ -38,8 +48,76 @@ let paused = false;
 let shuffleSeed = 1;
 let nextShuffleAt = 0;
 let immersiveSupported = false;
+let immersiveSupportState = 'checking';
+let immersiveSupportError = '';
 let immersiveSession;
 let immersiveRenderer;
+let immersiveRequestPending = false;
+
+function getLiveVideoTrack() {
+  return stream?.getVideoTracks().find((track) => track.readyState === 'live');
+}
+
+function getImmersiveGate() {
+  if (!window.isSecureContext) return { ready: false, reason: 'Blocked: page is not a secure context' };
+  if (!navigator.xr) return { ready: false, reason: 'Blocked: WebXR API is unavailable' };
+  if (immersiveSupportState === 'checking') return { ready: false, reason: 'Checking immersive VR support…' };
+  if (immersiveSupportState === 'error') return { ready: false, reason: `WebXR check failed: ${immersiveSupportError}` };
+  if (!immersiveSupported) return { ready: false, reason: 'Blocked: immersive-vr is unsupported' };
+  if (immersiveSession) return { ready: true, reason: 'Immersive session active' };
+  if (!getLiveVideoTrack()) return { ready: false, reason: 'Ready for WebXR; initialize camera first' };
+  if (immersiveRequestPending) return { ready: false, reason: 'Entering immersive view…' };
+  return { ready: true, reason: 'Ready for immersive view' };
+}
+
+function updateImmersiveGate() {
+  const gate = getImmersiveGate();
+  immersiveButton.disabled = !gate.ready;
+  immersiveButton.title = gate.reason;
+  immersiveReason.textContent = gate.reason;
+  immersiveReason.className = `immersive-reason ${gate.ready ? 'ready' : 'blocked'}`;
+  if (debugDialog.open) renderDiagnostics();
+}
+
+function diagnosticEntries() {
+  const track = stream?.getVideoTracks()[0];
+  const liveTrack = getLiveVideoTrack();
+  const settings = track?.getSettings?.() || {};
+  return [
+    ['Page', location.href],
+    ['Cache token', cacheToken || 'none'],
+    ['Secure context', String(window.isSecureContext), window.isSecureContext],
+    ['WebXR API', navigator.xr ? 'available' : 'unavailable', Boolean(navigator.xr)],
+    ['immersive-vr check', immersiveSupportState === 'complete' ? String(immersiveSupported) : immersiveSupportState, immersiveSupported],
+    ['WebXR error', immersiveSupportError || 'none'],
+    ['Immersive gate', getImmersiveGate().reason, getImmersiveGate().ready],
+    ['Camera stream', liveTrack ? 'live' : stream ? 'no live video track' : 'unavailable', Boolean(liveTrack)],
+    ['Video track', track ? `${track.label || 'unlabeled'} / ${track.readyState}` : 'none', track?.readyState === 'live'],
+    ['Track enabled / muted', track ? `${track.enabled} / ${track.muted}` : 'n/a'],
+    ['Camera settings', track ? `${settings.width || '?'} × ${settings.height || '?'} @ ${settings.frameRate || '?'} fps / ${settings.facingMode || 'unknown'}` : 'n/a'],
+    ['Video element', `${video.readyState} / ${video.videoWidth || 0} × ${video.videoHeight || 0}`],
+    ['WebGL2', String(Boolean(document.createElement('canvas').getContext('webgl2')))],
+    ['User agent', navigator.userAgent],
+  ];
+}
+
+function diagnosticsReport() {
+  return diagnosticEntries().map(([label, value]) => `${label}: ${value}`).join('\n');
+}
+
+function renderDiagnostics() {
+  const gate = getImmersiveGate();
+  debugSummary.textContent = gate.reason;
+  debugSummary.className = `debug-summary ${gate.ready ? '' : 'blocked'}`;
+  debugValues.replaceChildren(...diagnosticEntries().flatMap(([label, value, good]) => {
+    const term = document.createElement('dt');
+    const description = document.createElement('dd');
+    term.textContent = label;
+    description.textContent = value;
+    if (typeof good === 'boolean') description.className = good ? 'good' : 'bad';
+    return [term, description];
+  }));
+}
 
 function setStatus(message, state = '') {
   statusText.textContent = message;
@@ -271,19 +349,21 @@ function renderFrame(now) {
 }
 
 async function enterImmersive() {
-  if (!immersiveSupported || !stream) return;
+  if (!getImmersiveGate().ready) return;
   if (immersiveSession) {
     await immersiveSession.end();
     return;
   }
 
-  immersiveButton.disabled = true;
+  immersiveRequestPending = true;
+  updateImmersiveGate();
   setStatus('ENTERING IMMERSIVE');
-  const session = await navigator.xr.requestSession('immersive-vr', {
-    optionalFeatures: ['local-floor'],
-  });
+  let session;
 
   try {
+    session = await navigator.xr.requestSession('immersive-vr', {
+      optionalFeatures: ['local-floor'],
+    });
     const THREE = await import(THREE_URL);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x080b09);
@@ -302,6 +382,9 @@ async function enterImmersive() {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.repeat.x = -1;
+    texture.offset.x = 1;
 
     const visor = new THREE.Mesh(
       new THREE.PlaneGeometry(2.65, 2.65 * 9 / 16),
@@ -312,6 +395,8 @@ async function enterImmersive() {
 
     immersiveSession = session;
     immersiveRenderer = renderer;
+    immersiveRequestPending = false;
+    updateImmersiveGate();
     cancelAnimationFrame(animationFrame);
 
     session.addEventListener('end', () => {
@@ -320,13 +405,12 @@ async function enterImmersive() {
       renderer.domElement.remove();
       immersiveSession = undefined;
       immersiveRenderer = undefined;
-      immersiveButton.disabled = false;
       immersiveButton.lastChild.textContent = ' Enter immersive';
+      updateImmersiveGate();
       animationFrame = requestAnimationFrame(renderFrame);
     }, { once: true });
 
     await renderer.xr.setSession(session);
-    immersiveButton.disabled = false;
     immersiveButton.lastChild.textContent = ' Exit immersive';
     renderer.setAnimationLoop((time) => {
       drawProcessedFrame(time);
@@ -334,25 +418,35 @@ async function enterImmersive() {
       renderer.render(scene, camera);
     });
   } catch (error) {
-    await session.end();
+    immersiveRequestPending = false;
+    updateImmersiveGate();
+    if (session) await session.end();
     throw error;
   }
 }
 
 async function detectImmersiveSupport() {
-  if (!navigator.xr) return;
+  if (!navigator.xr) {
+    immersiveSupportState = 'unavailable';
+    updateImmersiveGate();
+    return;
+  }
   try {
     immersiveSupported = await navigator.xr.isSessionSupported('immersive-vr');
-    immersiveButton.disabled = !immersiveSupported || !stream;
-    immersiveButton.title = immersiveSupported ? 'Enter head-tracked immersive view' : 'Immersive WebXR is unavailable';
+    immersiveSupportState = 'complete';
   } catch (error) {
+    immersiveSupportState = 'error';
+    immersiveSupportError = `${error.name || 'Error'}: ${error.message || 'No message'}`;
     console.warn('Unable to determine immersive WebXR support:', error);
   }
+  updateImmersiveGate();
 }
 
 async function loadDetector() {
   if (detector) return;
   setStatus('LOADING VISION CORE');
+  visionModulePromise ||= import(MEDIAPIPE_URL);
+  const { FaceDetector, FilesetResolver } = await visionModulePromise;
   const vision = await FilesetResolver.forVisionTasks(WASM_URL);
   detector = await FaceDetector.createFromOptions(vision, {
     baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
@@ -364,12 +458,15 @@ async function loadDetector() {
 
 async function startCamera() {
   startButton.disabled = true;
+  cameraButton.disabled = true;
   errorMessage.textContent = '';
   setStatus('REQUESTING CAMERA');
 
   try {
     await loadDetector();
     stream?.getTracks().forEach((track) => track.stop());
+    stream = undefined;
+    updateImmersiveGate();
     stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: {
@@ -380,6 +477,7 @@ async function startCamera() {
       },
     });
     video.srcObject = stream;
+    getLiveVideoTrack()?.addEventListener('ended', updateImmersiveGate, { once: true });
     await video.play();
 
     canvas.width = video.videoWidth;
@@ -390,7 +488,7 @@ async function startCamera() {
     scanOverlay.classList.add('active');
     cameraButton.disabled = false;
     pauseButton.disabled = false;
-    immersiveButton.disabled = !immersiveSupported;
+    updateImmersiveGate();
     paused = false;
     cancelAnimationFrame(animationFrame);
     animationFrame = requestAnimationFrame(renderFrame);
@@ -403,6 +501,8 @@ async function startCamera() {
     setStatus('INITIALIZATION FAILED', 'error');
   } finally {
     startButton.disabled = false;
+    cameraButton.disabled = !getLiveVideoTrack();
+    updateImmersiveGate();
   }
 }
 
@@ -421,9 +521,30 @@ immersiveButton.addEventListener('click', async () => {
     await enterImmersive();
   } catch (error) {
     console.error('Unable to enter immersive mode:', error);
-    immersiveButton.disabled = false;
+    updateImmersiveGate();
     setStatus('IMMERSIVE FAILED', 'error');
   }
+});
+debugButton.addEventListener('click', () => {
+  renderDiagnostics();
+  debugDialog.showModal();
+});
+debugCloseButton.addEventListener('click', () => debugDialog.close());
+debugDialog.addEventListener('click', (event) => {
+  if (event.target === debugDialog) debugDialog.close();
+});
+debugCopyButton.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(diagnosticsReport());
+    debugCopyButton.textContent = 'Copied';
+  } catch (error) {
+    debugCopyButton.textContent = 'Copy unavailable';
+  }
+});
+hardRefreshButton.addEventListener('click', () => {
+  const url = new URL(location.href);
+  url.searchParams.set('fresh', Date.now().toString());
+  location.replace(url.href);
 });
 fullscreenButton.addEventListener('click', async () => {
   if (document.fullscreenElement) await document.exitFullscreen();
