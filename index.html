@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111412" />
+    <meta name="description" content="A local, browser-based face scrambling experiment." />
+    <title>SCRAMBLE // Optical Redaction</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://storage.googleapis.com" crossorigin />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <a class="wordmark" href="./" aria-label="SCRAMBLE home">
+          <span class="wordmark-mark" aria-hidden="true"></span>
+          <span>SCRAMBLE</span>
+        </a>
+        <div class="system-readout" aria-live="polite">
+          <span id="status-dot" class="status-dot"></span>
+          <span id="status-text">SYSTEM IDLE</span>
+        </div>
+        <button id="fullscreen-button" class="icon-button" type="button" title="Enter fullscreen" aria-label="Enter fullscreen">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+      </header>
+
+      <section class="workspace">
+        <aside class="control-rail" aria-label="Scramble controls">
+          <div class="control-heading">
+            <span>OPTICAL FILTER</span>
+            <span id="face-count" class="face-count">00</span>
+          </div>
+
+          <label class="control-group" for="tile-size">
+            <span class="control-label"><span>Fragment size</span><output id="tile-size-value">5 × 6</output></span>
+            <input id="tile-size" type="range" min="3" max="9" value="5" />
+          </label>
+
+          <label class="control-group" for="coverage">
+            <span class="control-label"><span>Coverage</span><output id="coverage-value">28%</output></span>
+            <input id="coverage" type="range" min="8" max="55" value="28" />
+          </label>
+
+          <label class="control-group" for="refresh-rate">
+            <span class="control-label"><span>Reshuffle</span><output id="refresh-rate-value">650 ms</output></span>
+            <input id="refresh-rate" type="range" min="150" max="1600" step="50" value="650" />
+          </label>
+
+          <label class="toggle-row" for="glitch-toggle">
+            <span>
+              <strong>Signal fracture</strong>
+              <small>Offset color channels</small>
+            </span>
+            <input id="glitch-toggle" type="checkbox" checked />
+            <span class="toggle" aria-hidden="true"></span>
+          </label>
+
+          <div class="rail-actions">
+            <button id="camera-button" class="text-button" type="button" disabled>
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m14.5 4-1-2h-3l-1 2H5a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-4.5Z"/><circle cx="12" cy="12" r="4"/></svg>
+              Switch camera
+            </button>
+            <button id="pause-button" class="text-button" type="button" disabled>
+              <svg aria-hidden="true" viewBox="0 0 24 24"><rect width="4" height="16" x="6" y="4"/><rect width="4" height="16" x="14" y="4"/></svg>
+              Pause feed
+            </button>
+          </div>
+
+          <p class="privacy-note">Frames are processed on this device and are never uploaded.</p>
+        </aside>
+
+        <section class="viewport" aria-label="Processed camera feed">
+          <video id="camera-feed" playsinline muted></video>
+          <canvas id="output-canvas"></canvas>
+
+          <div id="scan-overlay" class="scan-overlay" aria-hidden="true">
+            <span class="corner corner-nw"></span>
+            <span class="corner corner-ne"></span>
+            <span class="corner corner-sw"></span>
+            <span class="corner corner-se"></span>
+            <span class="scan-line"></span>
+          </div>
+
+          <div id="start-panel" class="start-panel">
+            <div class="aperture" aria-hidden="true"><span></span></div>
+            <p class="eyebrow">LOCAL VISION PROTOCOL</p>
+            <h1>Disrupt the face.<br />Preserve the scene.</h1>
+            <p class="start-copy">Allow camera access to begin real-time optical redaction.</p>
+            <button id="start-button" class="primary-button" type="button">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m14.5 4-1-2h-3l-1 2H5a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3h-4.5Z"/><circle cx="12" cy="12" r="4"/></svg>
+              Initialize camera
+            </button>
+            <p id="error-message" class="error-message" role="alert"></p>
+          </div>
+
+          <div class="viewport-meta" aria-hidden="true">
+            <span id="resolution-readout">NO SIGNAL</span>
+            <span>MP // BLAZEFACE</span>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

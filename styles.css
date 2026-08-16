@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap');
+
+:root {
+  color: #edf1eb;
+  background: #111412;
+  font-family: 'Space Grotesk', sans-serif;
+  font-synthesis: none;
+  --ink: #edf1eb;
+  --muted: #88918b;
+  --panel: #171b18;
+  --line: #323934;
+  --signal: #c7ff45;
+  --alert: #ff5a45;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; min-width: 0; min-height: 100%; background: #111412; }
+body { min-height: 100vh; min-height: 100dvh; overflow: hidden; }
+button, input { font: inherit; }
+button { color: inherit; }
+svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: square; stroke-linejoin: miter; }
+
+.app-shell {
+  display: grid;
+  grid-template-rows: 58px minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.topbar { display: grid; grid-template-columns: 260px 1fr 52px; align-items: center; border-bottom: 1px solid var(--line); background: rgba(17,20,18,.94); }
+.wordmark { height: 100%; display: flex; align-items: center; gap: 12px; padding: 0 20px; color: var(--ink); text-decoration: none; font-family: 'Chivo Mono', monospace; font-size: 14px; font-weight: 600; letter-spacing: 0; border-right: 1px solid var(--line); }
+.wordmark-mark { width: 16px; height: 16px; background: var(--signal); clip-path: polygon(0 0,100% 0,100% 35%,40% 35%,40% 65%,100% 65%,100% 100%,0 100%); }
+.system-readout { justify-self: end; display: flex; align-items: center; gap: 8px; margin-right: 20px; color: var(--muted); font: 500 10px 'Chivo Mono', monospace; }
+.status-dot { width: 7px; height: 7px; background: #626b65; }
+.status-dot.active { background: var(--signal); box-shadow: 0 0 12px rgba(199,255,69,.6); }
+.status-dot.error { background: var(--alert); }
+.icon-button { width: 52px; height: 57px; display: grid; place-items: center; padding: 0; border: 0; border-left: 1px solid var(--line); background: transparent; cursor: pointer; }
+.icon-button:hover { background: var(--signal); color: #111412; }
+
+.workspace { display: grid; grid-template-columns: 260px minmax(0, 1fr); min-height: 0; }
+.control-rail { display: flex; flex-direction: column; padding: 24px 20px 18px; border-right: 1px solid var(--line); background: rgba(23,27,24,.96); overflow-y: auto; }
+.control-heading { display: flex; justify-content: space-between; align-items: center; padding-bottom: 22px; color: var(--muted); font: 500 10px 'Chivo Mono', monospace; }
+.face-count { display: grid; place-items: center; width: 27px; height: 22px; color: #111412; background: var(--signal); font-size: 11px; }
+.control-group { display: grid; gap: 14px; padding: 19px 0 21px; border-top: 1px solid var(--line); }
+.control-label { display: flex; justify-content: space-between; gap: 10px; color: var(--ink); font-size: 12px; }
+.control-label output { color: var(--signal); font: 500 10px 'Chivo Mono', monospace; }
+input[type='range'] { width: 100%; height: 2px; appearance: none; background: var(--line); accent-color: var(--signal); cursor: pointer; }
+input[type='range']::-webkit-slider-thumb { width: 9px; height: 16px; appearance: none; border: 0; border-radius: 0; background: var(--signal); }
+input[type='range']::-moz-range-thumb { width: 9px; height: 16px; border: 0; border-radius: 0; background: var(--signal); }
+.toggle-row { position: relative; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 19px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.toggle-row strong, .toggle-row small { display: block; }
+.toggle-row strong { font-size: 12px; font-weight: 400; }
+.toggle-row small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+.toggle-row input { position: absolute; opacity: 0; pointer-events: none; }
+.toggle { width: 34px; height: 18px; flex: 0 0 auto; border: 1px solid #515a54; }
+.toggle::after { content: ''; display: block; width: 12px; height: 12px; margin: 2px; background: #626b65; transition: transform 140ms ease, background 140ms ease; }
+.toggle-row input:checked + .toggle { border-color: var(--signal); }
+.toggle-row input:checked + .toggle::after { background: var(--signal); transform: translateX(16px); }
+.rail-actions { display: grid; gap: 1px; margin-top: auto; padding-top: 20px; }
+.text-button { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid var(--line); background: #1b201c; font-size: 11px; cursor: pointer; }
+.text-button:hover:not(:disabled) { border-color: var(--signal); color: var(--signal); }
+.text-button:disabled { color: #59605b; cursor: not-allowed; }
+.privacy-note { margin: 17px 0 0; color: var(--muted); font: 400 9px/1.6 'Chivo Mono', monospace; }
+
+.viewport { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #0b0e0c; }
+#camera-feed { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+#output-canvas { width: 100%; height: 100%; display: block; object-fit: contain; }
+.viewport::after { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .18; background: repeating-linear-gradient(0deg, transparent 0, transparent 3px, rgba(0,0,0,.28) 4px); }
+.scan-overlay { position: absolute; inset: 24px; pointer-events: none; opacity: 0; transition: opacity 250ms ease; }
+.scan-overlay.active { opacity: 1; }
+.corner { position: absolute; width: 30px; height: 30px; border-color: rgba(199,255,69,.7); }
+.corner-nw { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
+.corner-ne { top: 0; right: 0; border-top: 1px solid; border-right: 1px solid; }
+.corner-sw { bottom: 0; left: 0; border-bottom: 1px solid; border-left: 1px solid; }
+.corner-se { right: 0; bottom: 0; border-right: 1px solid; border-bottom: 1px solid; }
+.scan-line { position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--signal), transparent); opacity: .32; animation: scan 4s linear infinite; }
+@keyframes scan { to { transform: translateY(calc(100vh - 108px)); } }
+
+.start-panel { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center; background: radial-gradient(circle at center, rgba(37,44,39,.7), rgba(11,14,12,.97) 55%); transition: opacity 300ms ease, visibility 300ms ease; }
+.start-panel.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.aperture { width: 76px; height: 76px; display: grid; place-items: center; margin-bottom: 28px; border: 1px solid #4a524c; transform: rotate(45deg); }
+.aperture::before, .aperture::after, .aperture span { content: ''; position: absolute; background: var(--signal); }
+.aperture::before { width: 26px; height: 2px; }
+.aperture::after { width: 2px; height: 26px; }
+.aperture span { width: 7px; height: 7px; }
+.eyebrow { margin: 0 0 14px; color: var(--signal); font: 500 10px 'Chivo Mono', monospace; }
+h1 { max-width: 720px; margin: 0; font-size: clamp(36px, 6vw, 76px); font-weight: 500; line-height: .98; letter-spacing: 0; }
+.start-copy { max-width: 420px; margin: 22px 0 26px; color: #aeb6b0; font-size: 14px; line-height: 1.5; }
+.primary-button { display: inline-flex; align-items: center; gap: 11px; min-height: 48px; padding: 0 20px; border: 1px solid var(--signal); background: var(--signal); color: #111412; font: 600 12px 'Chivo Mono', monospace; cursor: pointer; }
+.primary-button:hover { background: transparent; color: var(--signal); }
+.primary-button:disabled { opacity: .55; cursor: wait; }
+.error-message { min-height: 18px; max-width: 480px; margin: 14px 0 0; color: var(--alert); font: 500 10px/1.5 'Chivo Mono', monospace; }
+.viewport-meta { position: absolute; z-index: 2; right: 37px; bottom: 34px; left: 37px; display: flex; justify-content: space-between; color: rgba(237,241,235,.6); font: 500 9px 'Chivo Mono', monospace; pointer-events: none; }
+
+@media (max-width: 720px) {
+  body { overflow-x: hidden; overflow-y: auto; }
+  .app-shell { grid-template-rows: 52px auto; }
+  .topbar { grid-template-columns: 1fr auto 48px; }
+  .wordmark { border-right: 0; padding: 0 14px; }
+  .system-readout { margin-right: 12px; }
+  .icon-button { width: 48px; height: 51px; }
+  .workspace { grid-template-columns: 1fr; grid-template-rows: minmax(520px, 58vh) auto; }
+  .viewport { grid-row: 1; min-height: 520px; }
+  .control-rail { grid-row: 2; border-top: 1px solid var(--line); border-right: 0; overflow: visible; }
+  .rail-actions { margin-top: 8px; grid-template-columns: 1fr 1fr; }
+  .start-panel { padding: 24px 18px; }
+  .aperture { width: 58px; height: 58px; margin-bottom: 22px; }
+  h1 { font-size: clamp(34px, 11vw, 54px); }
+  .viewport-meta { right: 16px; bottom: 15px; left: 16px; }
+  .scan-overlay { inset: 14px; }
+}
+
+@media (max-width: 400px) {
+  .system-readout { margin-right: 8px; }
+  .system-readout #status-text { display: none; }
+  .wordmark { gap: 9px; font-size: 12px; }
+  .wordmark-mark { width: 14px; height: 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .scan-line { animation: none; } }
